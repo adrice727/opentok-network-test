@@ -1,163 +1,39 @@
-/* beautify preserve:start */
-/**
- * Network test
- */
-
-declare type ConnectionId = string;
-declare type Connection = {
-  connectionId: ConnectionId,
-  creationTime: number,
-  data: string
-}
-declare type VideoType = 'camera' | 'screen';
-
-// declare type QualityRating = 1 | 2 | 3 | 4 | 5;
-declare type TestVideoDimensions = { width: 1280, height: 720 } | { width: 640, height: 480 } | { width: 320, height: 240 };
-declare type TestStream = {
-  connection: Connection,
-  creationTime: number,
-  frameRate: number,
-  hasAudio: boolean,
-  hasVideo: boolean,
-  name: string,
-  streamId: string,
-  videoDimensions: TestVideoDimensions,
-  videoType: VideoType
-};
-
-
-declare type StatsBuilder = {
-  audio: CanBuildStats,
-  video: CanBuildStats,
-}
-
-declare type CanBuildStats = {
-  bytesReceived?: number,
-  packetsLost?: number,
-  packetsReceieved?: number
-};
-
-
-class Stats {
-  bytesReceived: number | void;
-  packetsLost: number | void;
-  packetsReceieved: number | void;
-  constructor(bytesReceived: number, packetsLost: number, packetsReceived: number) {
-    this.bytesReceived = bytesReceived;
-    this.packetsLost = packetsLost;
-    this.packetsReceieved = packetsReceived;
-  }
-
-  static fromBuilder(buildFrom: CanBuildStats) {
-    return new Stats(
-      buildFrom.bytesReceived || null,
-      buildFrom.packetsLost || null ,
-      buildFrom.packetsReceieved || null
-    );
-  }
-
-  static default(): Stats {
-    return new Stats(0,0,0);
-  }
-}
-
-declare type AudioStats = CanBuildStats;
-declare type VideoStats = CanBuildStats;
-// declare type CanBuildAudioStats = CanBuildStats;
-// declare type CanBuildVideoStats = CanBuildStats;
-declare type AudioProperty = keyof CanBuildStats;
-declare type VideoProperty = keyof CanBuildStats;
-
-
-// declare type BaseStats = {
-//   bytesReceived: number,
-//   packetsLost: number,
-//   packetsReceieved: number
-// };
-// declare type AudioStats = BaseStats;
-// declare type VideoStats = BaseStats;
-// declare type AudioProperty = $Keys<BaseStats>;
-// declare type VideoProperty = $Keys<VideoStats>;
-
-// declare type Stats = {
-//   audio: AudioStats,
-//   video: VideoStats,
-//   timestamp: number
-// };
-
-
-class StatsCollection {
-  audio: Stats;
-  video: Stats;
-  timestamp: Timestamp
-  constructor(buildFrom: StatsBuilder, timestamp: Timestamp) {
-    this.audio = Stats.fromBuilder(buildFrom.audio) || Stats.default();
-    this.video = Stats.fromBuilder(buildFrom.video) || Stats.default();
-    this.timestamp = timestamp;
-  }
-
-}
-
-declare type TestSubscriber = { stream: TestStream, getStats: (callback: (error: Error | null, stats: Stats) => void) => void };
-
-/* ********** */
-type StatProperty = AudioProperty | VideoProperty;
-type AV = 'audio' | 'video';
 const TEST_TIMEOUT_MS = 15000;
-enum QualityRating {
-  Excellent = 5,
-  Good = 4,
-  Fair = 3,
-  Poor = 2,
-  Bad = 1
-};
-
-type BandwidthCalculatorProps = {
-  subscriber: TestSubscriber,
-  pollingInterval?: number,
-  windowSize?: number
-};
-type Timestamp = number;
-
-type Snapshot = {
-  audio: AudioStats,
-  video: VideoStats,
-  timestamp: Timestamp
-};
-
-type PerSecondStatsProps = {
-  packetsPerSecond: number,
-  bitsPerSecond: number,
-  packetsLostPerSecond: number,
-  packetLossRatioPerSecond: number
-};
-type PerSecondStats = {
-  audio: PerSecondStatsProps,
-  video: PerSecondStatsProps,
-  windowSize: number,
-  elapsedTimeMs?: number
-};
-
-enum Resolution {
-  High = '1280x720',
-  Medium = '640x480',
-  Low = '320x240'
+const max = (numbers: number[]): number => Math.max.apply(undefined, numbers);
+const min = (numbers: number[]): number => Math.min.apply(undefined, numbers);
+// const pluck = <A>(list: Array<Map<string, A>>, property: string): A[] =>
+//   list.reduce((acc: A[], obj: Map<string, A>) => obj[property] ? acc.concat(obj[property]) : acc, []);
+const flatMap = <A,B>(f: (A) => B[], list: A[]): B[] => {
+  return list.map(f).reduce((acc, ls) => acc.concat(ls), [])
 }
-/* beautify preserve:end */
+const sum = (values: number[]): number =>
+  values.reduce((acc: number, a: number): number => acc + a, 0);
 
-function max(numbers: number[]): number { return Math.max.apply(undefined, numbers); }
-function min(numbers: number[]): number { return Math.min.apply(undefined, numbers); }
-function pluck<A>(list: Array<{ [key: string]: A }>, property: string): A[] {
-  return list.reduce((acc, obj) => obj[property] ? acc.concat(obj[property]) : acc, [])
-}
-function sum(values: number[]): number {
-  return values.reduce((acc: number, a: number): number => acc + a, 0);
-}
+  class PerSecondStats {
+    audio: PerSecondStatsProps
+    video: PerSecondStatsProps
+    windowSize: number
+    elapsedTimeMs?: number
 
+    constructor(windowSize: number, audio: NumberMap, video: NumberMap) {
+      this.windowSize = windowSize;
+      this.audio = this.extendMap(audio);
+      this.video = this.extendMap(video);
+    }
+
+    private extendMap(map: NumberMap): PerSecondStatsProps {
+      return {
+        packetsPerSecond: map.packetsPerSecond || 0,
+        bitsPerSecond: map.bitsPerSecond || 0,
+        packetsLostPerSecond: map.packetsLostPerSecond || 0,
+        packetLossRatioPerSecond: map.packetLossRatioPerSecond || 0
+      }
+    }
+  };
 
 const analyzeStats = (results: PerSecondStats, subscriber: TestSubscriber): QualityRating => {
-  // if (!subscriber || !subscriber.stream) return MOSQuality.Bad;
-  if (subscriber && subscriber.stream && subscriber.stream.hasVideo) {
+
+if (subscriber && subscriber.stream && subscriber.stream.hasVideo) {
     const videoBw = results.video.bitsPerSecond / 1000;
     const videoPLRatio = results.video.packetLossRatioPerSecond;
     const frameRate = (subscriber.stream.frameRate && subscriber.stream.frameRate.toString()) || '30';
@@ -168,7 +44,7 @@ const analyzeStats = (results: PerSecondStats, subscriber: TestSubscriber): Qual
         '1280x720-30': [250, 350, 600, 1000],
         '1280x720-15': [150, 250, 350, 800],
         '1280x720-7': [120, 150, 250, 400],
-      };
+      }[`${Resolution.High}-${frameRate}`];
       if (videoBw > aVideoLimits[3] && videoPLRatio < 0.1) {
         return QualityRating.Excellent;
       } else if (videoBw > aVideoLimits[2] && videoBw <= aVideoLimits[3] && videoPLRatio < 0.02) {
@@ -276,7 +152,7 @@ const analyzeStats = (results: PerSecondStats, subscriber: TestSubscriber): Qual
           } else if (videoBw < 100 || videoPLRatio > 0.1) {
             return QualityRating.Bad;
           }
-          return MOSQuality.Bad;
+          return QualityRating.Bad;
         case '7':
           if (videoBw > 150 && videoPLRatio < 0.1) {
             return QualityRating.Excellent;
@@ -312,18 +188,20 @@ const analyzeStats = (results: PerSecondStats, subscriber: TestSubscriber): Qual
 
 const calculatePerSecondStats = (statsBuffer: Snapshot[], seconds: number): PerSecondStats => {
 
-  const stats = { windowSize: seconds, audio: {}, video: {} };
+  const stats: { audio: NumberMap, video: NumberMap } = { audio: {}, video: {} };
   ['video', 'audio'].forEach((type: AV) => {
     stats[type] = {
-      packetsPerSecond: (sum(pluck(pluck(statsBuffer, type), 'packetsReceived'))) / seconds,
-      bitsPerSecond: (sum(pluck(pluck(statsBuffer, type), 'bytesReceived')) * 8) / seconds,
-      packetsLostPerSecond: (sum(pluck(pluck(statsBuffer, type), 'packetsLost'))) / seconds,
+      packetsPerSecond: sum(flatMap(s => s[type].map(ss => ss.packetsReceieved), statsBuffer)) / seconds,
+      bitsPerSecond: sum(flatMap(s => s[type].map(ss => ss.bytesReceived), statsBuffer)) / seconds,
+      packetsLostPerSecond: sum(flatMap(s => s[type].map(s => s.packetsLost), statsBuffer)) / seconds,
     };
     stats[type].packetLossRatioPerSecond = (
-      stats[type].packetsLostPerSecond / stats[type].packetsPerSecond
+      stats[type].packetsLostPerSecond / statsBuffer[type].packetsPerSecond
     );
   });
-  return stats;
+
+  return new PerSecondStats(seconds, stats.audio, stats.video)
+
 };
 
 const getSampleWindowSize = (samples: Snapshot[]): number => {
@@ -346,34 +224,40 @@ class BandwidthCalculator {
     this.end = this.end.bind(this);
   }
 
-  start(reportFunction: PerSecondStats => void) {
+  start(reportFunction: (PerSecondStats) => void) {
     const statsBuffer: Snapshot[] = [];
-    const last = {
-      audio: {},
-      video: {},
+    const emptyStats = (): BaseStats => ({
+      bytesReceived: 0,
+      packetsLost: 0,
+      packetsReceieved: 0
+    })
+    const last: { audio: BaseStats, video: BaseStats } = {
+      audio: emptyStats(),
+      video: emptyStats()
     };
     this.intervalId = setInterval(() => {
       this.subscriber.getStats((error: Error | null, stats: Stats | void) => {
-        const snapshot = {};
+        const update = {audio: emptyStats(), video: emptyStats()};
         const nowMs = new Date().getTime();
         if (!stats) {
           clearInterval(this.intervalId);
           return;
         }
 
-        /* eslint-disable flowtype/no-weak-types */
-        ['audio', 'video'].forEach((type: AV) => { // $FlowFixMe
-          snapshot[type] = Object.keys(stats[type]).reduce((acc: Object, key: StatProperty): AudioStats | VideoStats => {
-            // $FlowFixMe
-            const delta = stats[type][key] - (last[type][key] || 0); // $FlowFixMe
+        ['audio', 'video'].forEach((type: AV) => {
+          update[type] = Object.keys(stats[type]).reduce((acc: BaseStats, key: StatProperty): BaseStats => {
+            const delta = stats[type][key] - (last[type][key] || 0);
             last[type][key] = stats[type][key];
             return Object.assign({}, acc, { [key]: delta });
-          }, { [type]: {} });
+          }, emptyStats());
         });
-        /* eslint-enable flowtype/no-weak-types */
 
         // get a snapshot of now, and keep the last values for next round
-        snapshot.timestamp = stats.timestamp;
+        const snapshot: Snapshot = {
+          audio: update.audio,
+          video: update.video,
+          timestamp: stats.timestamp
+        }
         statsBuffer.push(snapshot);
 
         const filteredBuffer = statsBuffer.filter((s: Snapshot): boolean => (nowMs - s.timestamp) < this.windowSize);
@@ -394,12 +278,11 @@ class BandwidthCalculator {
   }
 }
 
-type TestConfig = { subscriber: TestSubscriber };
 const performQualityTest = (config: TestConfig): Promise<QualityRating> =>
   new Promise((resolve, reject) => {
     const startMs = new Date().getTime();
-    let testTimeout;
-    let currentStats;
+    let testTimeout: any;
+    let currentStats: PerSecondStats;
 
     const bandwidthCalculator = new BandwidthCalculator({ subscriber: config.subscriber });
 
@@ -416,7 +299,7 @@ const performQualityTest = (config: TestConfig): Promise<QualityRating> =>
     };
 
     // bail out of the test after 30 seconds
-    setTimeout(cleanupAndReport, TEST_TIMEOUT_MS);
+    testTimeout = setTimeout(cleanupAndReport, TEST_TIMEOUT_MS);
 
     bandwidthCalculator.start((stats: PerSecondStats) => {
       currentStats = stats;
