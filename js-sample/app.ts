@@ -41,10 +41,10 @@ if (subscriber && subscriber.stream && subscriber.stream.hasVideo) {
     const resolution: String = `${width}x${height}`;
     if (resolution === Resolution.High) {
       const aVideoLimits = {
-        '1280x720-30': [250, 350, 600, 1000],
-        '1280x720-15': [150, 250, 350, 800],
-        '1280x720-7': [120, 150, 250, 400],
-      }[`${Resolution.High}-${frameRate}`];
+        '30': [250, 350, 600, 1000],
+        '15': [150, 250, 350, 800],
+        '7': [120, 150, 250, 400],
+      }[frameRate];
       if (videoBw > aVideoLimits[3] && videoPLRatio < 0.1) {
         return QualityRating.Excellent;
       } else if (videoBw > aVideoLimits[2] && videoBw <= aVideoLimits[3] && videoPLRatio < 0.02) {
