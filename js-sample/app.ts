@@ -1,8 +1,6 @@
 const TEST_TIMEOUT_MS = 15000;
 const max = (numbers: number[]): number => Math.max.apply(undefined, numbers);
 const min = (numbers: number[]): number => Math.min.apply(undefined, numbers);
-// const pluck = <A>(list: Array<Map<string, A>>, property: string): A[] =>
-//   list.reduce((acc: A[], obj: Map<string, A>) => obj[property] ? acc.concat(obj[property]) : acc, []);
 const flatMap = <A,B>(f: (A) => B[], list: A[]): B[] => {
   return list.map(f).reduce((acc, ls) => acc.concat(ls), [])
 }
