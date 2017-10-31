@@ -1,37 +1,37 @@
 const TEST_TIMEOUT_MS = 15000;
 const max = (numbers: number[]): number => Math.max.apply(undefined, numbers);
 const min = (numbers: number[]): number => Math.min.apply(undefined, numbers);
-const flatMap = <A,B>(f: (A) => B[], list: A[]): B[] => {
+const flatMap = <A, B>(f: (A) => B[], list: A[]): B[] => {
   return list.map(f).reduce((acc, ls) => acc.concat(ls), [])
 }
 const sum = (values: number[]): number =>
   values.reduce((acc: number, a: number): number => acc + a, 0);
 
-  class PerSecondStats {
-    audio: PerSecondStatsProps
-    video: PerSecondStatsProps
-    windowSize: number
-    elapsedTimeMs?: number
+class PerSecondStats {
+  audio: PerSecondStatsProps
+  video: PerSecondStatsProps
+  windowSize: number
+  elapsedTimeMs?: number
 
-    constructor(windowSize: number, audio: NumberMap, video: NumberMap) {
-      this.windowSize = windowSize;
-      this.audio = this.extendMap(audio);
-      this.video = this.extendMap(video);
-    }
+  constructor(windowSize: number, audio: NumberMap, video: NumberMap) {
+    this.windowSize = windowSize;
+    this.audio = this.extendMap(audio);
+    this.video = this.extendMap(video);
+  }
 
-    private extendMap(map: NumberMap): PerSecondStatsProps {
-      return {
-        packetsPerSecond: map.packetsPerSecond || 0,
-        bitsPerSecond: map.bitsPerSecond || 0,
-        packetsLostPerSecond: map.packetsLostPerSecond || 0,
-        packetLossRatioPerSecond: map.packetLossRatioPerSecond || 0
-      }
+  private extendMap(map: NumberMap): PerSecondStatsProps {
+    return {
+      packetsPerSecond: map.packetsPerSecond || 0,
+      bitsPerSecond: map.bitsPerSecond || 0,
+      packetsLostPerSecond: map.packetsLostPerSecond || 0,
+      packetLossRatioPerSecond: map.packetLossRatioPerSecond || 0
     }
-  };
+  }
+};
 
 const analyzeStats = (results: PerSecondStats, subscriber: TestSubscriber): QualityRating => {
 
-if (subscriber && subscriber.stream && subscriber.stream.hasVideo) {
+  if (subscriber && subscriber.stream && subscriber.stream.hasVideo) {
     const videoBw = results.video.bitsPerSecond / 1000;
     const videoPLRatio = results.video.packetLossRatioPerSecond;
     const frameRate = (subscriber.stream.frameRate && subscriber.stream.frameRate.toString()) || '30';
@@ -235,7 +235,7 @@ class BandwidthCalculator {
     };
     this.intervalId = setInterval(() => {
       this.subscriber.getStats((error: Error | null, stats: Stats | void) => {
-        const update = {audio: emptyStats(), video: emptyStats()};
+        const update = { audio: emptyStats(), video: emptyStats() };
         const nowMs = new Date().getTime();
         if (!stats) {
           clearInterval(this.intervalId);
